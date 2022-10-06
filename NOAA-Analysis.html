@@ -503,7 +503,7 @@ etypes &lt;- etypes[!(etypes %in% c(astronomical_low_tide, coastal_flood, lake_e
 
 ## The choice of separation between &quot;heat&quot; and &quot;excessive heat&quot; is a bit arbitrary,
 ## But I&#39;m recording special heat events as &quot;excessive&quot; and heat waves as just &quot;heat&quot;
-excessive_heat &lt;- c(&quot;EXCESSIVE HEAT&quot;, &quot;Heatburst&quot;, &quot;Record Heat&quot;, &quot;RECORD HEAT&quot;)
+excessive_heat &lt;- c(&quot;EXCESSIVE HEAT&quot;, &quot;Heatburst&quot;, &quot;Record Heat&quot;, &quot;RECORD HEAT&quot;, &quot;RECORD HIGH&quot;)
 heat &lt;- search_list(etypes, &quot;heat&quot;)
 heat &lt;- heat[!(heat %in% excessive_heat)]
 
@@ -518,25 +518,26 @@ cold_wind_chill &lt;- c(&quot;Cold&quot;, &quot;Unseasonable Cold&quot;, &quot;C
           &quot;PROLONG COLD&quot;, &quot;COLD AND FROST&quot;, &quot;COLD TEMPERATURES&quot;, &quot;COLD WIND CHILL TEMPERATURES&quot;, 
           &quot;UNUSUALLY COLD&quot;, &quot;COLD WEATHER&quot;, &quot;COLD/WIND CHILL&quot;, &quot;WIND CHILL&quot;,
           &quot;BITTER WIND CHILL&quot;, &quot;BITTER WIND CHILL TEMPERATURES&quot;)
-extreme_cold_wind_chill &lt;- c(search_list(etypes, &quot;cold&quot;), search_list(etypes, &quot;chill&quot;))
+extreme_cold_wind_chill &lt;- c(search_list(etypes, &quot;cold&quot;), search_list(etypes, &quot;chill&quot;), search_list(etypes, &quot;Hypothermia&quot;))
 extreme_cold_wind_chill &lt;- extreme_cold_wind_chill[!(extreme_cold_wind_chill %in% cold_wind_chill)]
 sleet &lt;- search_list(etypes, &quot;sleet&quot;)
-heavy_snow &lt;- c(&quot;HEAVY SNOW&quot;, &quot;Snow Squalls&quot;, &quot;Record Winter Snow&quot;, &quot;Heavy snow shower&quot;, 
-                &quot;Record May Snow&quot;, &quot;Thundersnow shower&quot;, &quot;SNOW SQUALL&quot;, 
-                &quot;HEAVY SNOW SQUALLS&quot;, &quot;SNOW SQUALLS&quot;, &quot;RECORD SNOWFALL&quot;, 
-                &quot;EXCESSIVE SNOW&quot;, &quot;RECORD SNOW&quot;)
+heavy_snow &lt;- c(&quot;HEAVY SNOW&quot;, &quot;Record Winter Snow&quot;, &quot;Heavy snow shower&quot;, 
+                &quot;Record May Snow&quot;, &quot;Thundersnow shower&quot;, &quot;RECORD SNOWFALL&quot;, 
+                &quot;EXCESSIVE SNOW&quot;, &quot;RECORD SNOW&quot;, search_list(etypes, &quot;squall&quot;))
 ## And after some debate with my rubber duck, everything left over is going to 
 ## be tossed into the &quot;winter weather&quot; section. So literally everyting with
 ## &quot;cold&quot;, &quot;snow&quot;, &quot;freez[e/ing]&quot;, etc goes in here. Then just filter out like
 ## I&#39;ve been doing with &quot;evtype&quot;
 winter_weather &lt;- c(search_list(etypes, &quot;cold&quot;), search_list(etypes, &quot;snow&quot;), 
                     search_list(etypes, &quot;freez&quot;), search_list(etypes, &quot;ice&quot;), 
-                    search_list(etypes, &quot;icy&quot;), search_list(etypes, &quot;winter&quot;))
+                    search_list(etypes, &quot;icy&quot;), search_list(etypes, &quot;winter&quot;),
+                    search_list(etypes, &quot;wintry&quot;))
 winter_weather &lt;- winter_weather[!(winter_weather %in% c(blizzard, icestorm, 
                     winter_storm, frost_freeze, cold_wind_chill, 
                     extreme_cold_wind_chill, sleet, heavy_snow))]
-etypes &lt;- etypes[!(etypes %in% c(blizzard, icestorm, winter_storm, frost_freeze, 
-                    cold_wind_chill, extreme_cold_wind_chill, winter_weather))]</code></pre>
+etypes &lt;- etypes[!(etypes %in% c(heat, excessive_heat, blizzard, icestorm, winter_storm, 
+                                 heavy_snow, frost_freeze, cold_wind_chill, 
+                                 extreme_cold_wind_chill, sleet, winter_weather))]</code></pre>
 <p>That was a lot of code, so let’s take a moment to dive into exactly
 what I did:</p>
 <p>There were really 3 sections: some easy filters, heat, and cold. The
@@ -564,6 +565,34 @@ even afterwards, don’t get me started on statistical significance). The
 decisions I’ve made are somewhat arbitrary, but they will allow for a
 general understanding of what is and isn’t really impactful within the
 48 given categories.</p>
+<pre class="r"><code>high_surf &lt;- search_list(etypes, &quot;surf&quot;)
+flood &lt;- c(search_list(etypes, &quot;fld&quot;), search_list(etypes, &quot;flood&quot;))
+flash_flood &lt;- search_list(flood, &quot;flash&quot;)
+flood &lt;- flood[!(flood %in% flash_flood)]
+
+## Okay, look. The difference between &quot;high&quot; and &quot;strong&quot; wind is a hilarious notion.
+## Actually? Forget that. According to the internet, this is a nonsense notion.
+## High and Strong winds are identical colloquially and I cannot find a strict 
+## difference between them. My decision here is that all wind categories will be 
+## thrown into one category, strong winds.
+strong_wind &lt;- c(search_list(etypes, &quot;wind&quot;), search_list(etypes, &quot;wnd&quot;))
+
+heavy_rain &lt;- c(search_list(etypes, &quot;rain&quot;), search_list(etypes, &quot;tstm&quot;), search_list(etypes, &quot;thund&quot;))
+heavy_rain &lt;- heavy_rain[!(heavy_rain %in% c(search_list(heavy_rain, &quot;low&quot;), search_list(heavy_rain, &quot;freez&quot;), search_list(heavy_rain, &quot;month&quot;)))]
+
+etypes &lt;- etypes[!(etypes %in% c(high_surf, flood, flash_flood, strong_wind, heavy_rain))]</code></pre>
+<p>That’s all the sorting I’m doing on this front. About the way this
+all went, there are quite a few different event types sorted into 2-3
+different categories from the given list. I wound up with 2 different
+categories entirely excluded from the final list: “debris flow” and
+“high wind”. Additionally, there are 102 total unique values from the
+original etypes set that aren’t used in any of the 46 remaining
+categories. I looked over these values directly, putting values I
+thought fit another category in directly. Beyond that, there doesn’t
+appear to be anything that directly fits the categories as I’ve marked
+them. Seeing as there are so many remaining values, it wouldn’t be
+reasonable to try to put them into an “other” category. I’ll just have
+to let these go, I’d reckon.</p>
 </div>
 </div>
 

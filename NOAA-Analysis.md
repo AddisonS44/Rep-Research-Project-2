@@ -163,7 +163,7 @@ etypes <- etypes[!(etypes %in% c(astronomical_low_tide, coastal_flood, lake_effe
 
 ## The choice of separation between "heat" and "excessive heat" is a bit arbitrary,
 ## But I'm recording special heat events as "excessive" and heat waves as just "heat"
-excessive_heat <- c("EXCESSIVE HEAT", "Heatburst", "Record Heat", "RECORD HEAT")
+excessive_heat <- c("EXCESSIVE HEAT", "Heatburst", "Record Heat", "RECORD HEAT", "RECORD HIGH")
 heat <- search_list(etypes, "heat")
 heat <- heat[!(heat %in% excessive_heat)]
 
@@ -178,25 +178,26 @@ cold_wind_chill <- c("Cold", "Unseasonable Cold", "COLD", "Cold Temperature",
           "PROLONG COLD", "COLD AND FROST", "COLD TEMPERATURES", "COLD WIND CHILL TEMPERATURES", 
           "UNUSUALLY COLD", "COLD WEATHER", "COLD/WIND CHILL", "WIND CHILL",
           "BITTER WIND CHILL", "BITTER WIND CHILL TEMPERATURES")
-extreme_cold_wind_chill <- c(search_list(etypes, "cold"), search_list(etypes, "chill"))
+extreme_cold_wind_chill <- c(search_list(etypes, "cold"), search_list(etypes, "chill"), search_list(etypes, "Hypothermia"))
 extreme_cold_wind_chill <- extreme_cold_wind_chill[!(extreme_cold_wind_chill %in% cold_wind_chill)]
 sleet <- search_list(etypes, "sleet")
-heavy_snow <- c("HEAVY SNOW", "Snow Squalls", "Record Winter Snow", "Heavy snow shower", 
-                "Record May Snow", "Thundersnow shower", "SNOW SQUALL", 
-                "HEAVY SNOW SQUALLS", "SNOW SQUALLS", "RECORD SNOWFALL", 
-                "EXCESSIVE SNOW", "RECORD SNOW")
+heavy_snow <- c("HEAVY SNOW", "Record Winter Snow", "Heavy snow shower", 
+                "Record May Snow", "Thundersnow shower", "RECORD SNOWFALL", 
+                "EXCESSIVE SNOW", "RECORD SNOW", search_list(etypes, "squall"))
 ## And after some debate with my rubber duck, everything left over is going to 
 ## be tossed into the "winter weather" section. So literally everyting with
 ## "cold", "snow", "freez[e/ing]", etc goes in here. Then just filter out like
 ## I've been doing with "evtype"
 winter_weather <- c(search_list(etypes, "cold"), search_list(etypes, "snow"), 
                     search_list(etypes, "freez"), search_list(etypes, "ice"), 
-                    search_list(etypes, "icy"), search_list(etypes, "winter"))
+                    search_list(etypes, "icy"), search_list(etypes, "winter"),
+                    search_list(etypes, "wintry"))
 winter_weather <- winter_weather[!(winter_weather %in% c(blizzard, icestorm, 
                     winter_storm, frost_freeze, cold_wind_chill, 
                     extreme_cold_wind_chill, sleet, heavy_snow))]
-etypes <- etypes[!(etypes %in% c(blizzard, icestorm, winter_storm, frost_freeze, 
-                    cold_wind_chill, extreme_cold_wind_chill, winter_weather))]
+etypes <- etypes[!(etypes %in% c(heat, excessive_heat, blizzard, icestorm, winter_storm, 
+                                 heavy_snow, frost_freeze, cold_wind_chill, 
+                                 extreme_cold_wind_chill, sleet, winter_weather))]
 ```
 
 That was a lot of code, so let's take a moment to dive into exactly what I did:
@@ -225,3 +226,38 @@ the data is cleaned (and even afterwards, don't get me started on statistical
 significance). The decisions I've made are somewhat arbitrary, but they will allow 
 for a general understanding of what is and isn't really impactful within the 48 
 given categories.
+
+
+```r
+high_surf <- search_list(etypes, "surf")
+flood <- c(search_list(etypes, "fld"), search_list(etypes, "flood"))
+flash_flood <- search_list(flood, "flash")
+flood <- flood[!(flood %in% flash_flood)]
+
+## Okay, look. The difference between "high" and "strong" wind is a hilarious notion.
+## Actually? Forget that. According to the internet, this is a nonsense notion.
+## High and Strong winds are identical colloquially and I cannot find a strict 
+## difference between them. My decision here is that all wind categories will be 
+## thrown into one category, strong winds.
+strong_wind <- c(search_list(etypes, "wind"), search_list(etypes, "wnd"))
+
+heavy_rain <- c(search_list(etypes, "rain"), search_list(etypes, "tstm"), search_list(etypes, "thund"))
+heavy_rain <- heavy_rain[!(heavy_rain %in% c(search_list(heavy_rain, "low"), search_list(heavy_rain, "freez"), search_list(heavy_rain, "month")))]
+
+etypes <- etypes[!(etypes %in% c(high_surf, flood, flash_flood, strong_wind, heavy_rain))]
+```
+
+That's all the sorting I'm doing on this front. About the way this all went, there
+are quite a few different event types sorted into 2-3 different categories from 
+the given list. I wound up with 2 different categories entirely excluded from the 
+final list: "debris flow" and "high wind". Additionally, there are 102 total 
+unique values from the original etypes set that aren't used in any of the 46 
+remaining categories. I looked over these values directly, putting values I 
+thought fit another category in directly. Beyond that, there doesn't appear to 
+be anything that directly fits the categories as I've marked them. Seeing as 
+there are so many remaining values, it wouldn't be reasonable to try to put them 
+into an "other" category. I'll just have to let these go, I'd reckon.
+
+
+
+
