@@ -21,7 +21,7 @@ if(!file.exists("Data/StormData.csv")) {
 StormData <- read.csv("Data/StormData.csv")
 ```
 
-## Filtering
+## Preliminary Work
 The first order of business on this data is the fact that not all of the data was 
 actually recorded every year. In fact, even though the data starts with 1950, it 
 isn't until January 1996 that all of the potential event types are present.
@@ -170,7 +170,7 @@ heat <- heat[!(heat %in% excessive_heat)]
 ## All the cold stuff goes here. I'm gonna just match in bulk and let the later 
 ## steps sort out the duplicates. I do have a plan for that.
 blizzard <- search_list(etypes, "blizz")
-icestorm <- search_list(search_list(etypes, "ice"), "storm")
+ice_storm <- search_list(search_list(etypes, "ice"), "storm")
 winter_storm <- c("WINTER STORM", "Record Winter Snow")
 frost_freeze <- unique(c(search_list(etypes, "freeze"), search_list(etypes, "frost")))
 cold_wind_chill <- c("Cold", "Unseasonable Cold", "COLD", "Cold Temperature", 
@@ -192,10 +192,10 @@ winter_weather <- c(search_list(etypes, "cold"), search_list(etypes, "snow"),
                     search_list(etypes, "freez"), search_list(etypes, "ice"), 
                     search_list(etypes, "icy"), search_list(etypes, "winter"),
                     search_list(etypes, "wintry"))
-winter_weather <- winter_weather[!(winter_weather %in% c(blizzard, icestorm, 
+winter_weather <- winter_weather[!(winter_weather %in% c(blizzard, ice_storm, 
                     winter_storm, frost_freeze, cold_wind_chill, 
                     extreme_cold_wind_chill, sleet, heavy_snow))]
-etypes <- etypes[!(etypes %in% c(heat, excessive_heat, blizzard, icestorm, winter_storm, 
+etypes <- etypes[!(etypes %in% c(heat, excessive_heat, blizzard, ice_storm, winter_storm, 
                                  heavy_snow, frost_freeze, cold_wind_chill, 
                                  extreme_cold_wind_chill, sleet, winter_weather))]
 ```
@@ -244,20 +244,164 @@ strong_wind <- c(search_list(etypes, "wind"), search_list(etypes, "wnd"))
 heavy_rain <- c(search_list(etypes, "rain"), search_list(etypes, "tstm"), search_list(etypes, "thund"))
 heavy_rain <- heavy_rain[!(heavy_rain %in% c(search_list(heavy_rain, "low"), search_list(heavy_rain, "freez"), search_list(heavy_rain, "month")))]
 
-etypes <- etypes[!(etypes %in% c(high_surf, flood, flash_flood, strong_wind, heavy_rain))]
+debris_flow <- search_list(etypes, "slide")
+
+etypes <- etypes[!(etypes %in% c(high_surf, flood, flash_flood, strong_wind, heavy_rain, debris_flow))]
 ```
 
 That's all the sorting I'm doing on this front. About the way this all went, there
 are quite a few different event types sorted into 2-3 different categories from 
-the given list. I wound up with 2 different categories entirely excluded from the 
-final list: "debris flow" and "high wind". Additionally, there are 102 total 
-unique values from the original etypes set that aren't used in any of the 46 
+the given list. I wound up with one category entirely excluded from the 
+final list: "high wind". Additionally, there are 93 total 
+unique values from the original etypes set that aren't used in any of the 47 
 remaining categories. I looked over these values directly, putting values I 
 thought fit another category in directly. Beyond that, there doesn't appear to 
 be anything that directly fits the categories as I've marked them. Seeing as 
 there are so many remaining values, it wouldn't be reasonable to try to put them 
 into an "other" category. I'll just have to let these go, I'd reckon.
 
+## Reshaping the Data
 
+If you're just tuning in, right now I've taken all of the Event Types in the 
+original dataframe and sorted them into lists with the name of all of the event 
+types from the list at the true source of the data. You can find that list on
+page 6 of [this document](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf).
+As stated in the last section, "high wind" isn't included in the list because I 
+was unable to find a specific way to differentiate between "high wind" and 
+"strong wind". This leaves 47 categories to be looked at. 
 
+With that said, here's what I'm planning to take care of in this section. I need
+a dataframe in the same general form as the StormData dataframe from earlier, but
+with a few differences:
 
+1. Each row should have its EVTYPE value set to whatever it matches with the lists
+created earlier, including duplicating rows whenever necessary.
+2. Unnecessary columns need to be pruned. The prompt for this write up specifies 
+the entire United States, so location is one example of something to be removed 
+from the dataframe. 
+3. From what I can tell, the data for actual agricultural damage data is sorted 
+as essentially scientific notation, with one column representing the value to be 
+multiplied by the exponent in another column. For example, a certain row lists 
+"38" as the base value and "K" as the exponent. This would translate into 38,000 
+in crop damages. This means we're gonna need a new column dealing with this 
+specific transformation value.
+  + Regarding the casualties data, it is all stored in a more normal method, so 
+  this sort of transformation is needless.
+  
+With that all set, let's start by making a list that will make all of this a lot 
+easier. In doing this, I'll be setting all of the list values as names that can 
+be referenced. This means I can call the character vectors from the list by name
+which will come in handy later as I plan to use those variable names themselves.
+
+```r
+etype_categories <- list(astronomical_low_tide = astronomical_low_tide, 
+  avalanche = avalanche, blizzard = blizzard, coastal_flood = coastal_flood, 
+  cold_wind_chill = cold_wind_chill, debris_flow = debris_flow, dense_fog = dense_fog, 
+  dense_smoke = dense_smoke, drought = drought, dust_devil = dust_devil, dust_storm = dust_storm, 
+  excessive_heat = excessive_heat, extreme_cold_wind_chill = extreme_cold_wind_chill, 
+  flash_flood = flash_flood, flood = flood, frost_freeze = frost_freeze, funnel_cloud = funnel_cloud, 
+  freezing_fog = freezing_fog, hail = hail, heat = heat, heavy_rain = heavy_rain, 
+  heavy_snow = heavy_snow, high_surf = high_surf, hurricane_typhoon = hurricane_typhoon, 
+  ice_storm = ice_storm, lake_effect_snow = lake_effect_snow, lakeshore_flood = lakeshore_flood, 
+  lightning = lightning, marine_hail = marine_hail, marine_high_wind = marine_high_wind, 
+  marine_strong_wind = marine_strong_wind, marine_thunderstorm_wind = marine_thunderstorm_wind, 
+  rip_current = rip_current, seiche = seiche, sleet = sleet, storm_surge_tide = storm_surge_tide, 
+  strong_wind = strong_wind, thunderstorm_wind = thunderstorm_wind, tornado = tornado, 
+  tropical_depression = tropical_depression, tropical_storm = tropical_storm, tsunami = tsunami, 
+  volcanic_ash = volcanic_ash, waterspout = waterspout, wildfire = wildfire, 
+  winter_storm = winter_storm, winter_weather = winter_weather)
+
+names(etype_categories)[2]
+```
+
+```
+## [1] "avalanche"
+```
+
+```r
+etype_categories[2]
+```
+
+```
+## $avalanche
+## [1] "AVALANCHE"
+```
+
+As the output shows, the names of the list elements correspond to the category of 
+that element's character vector. The trick here is going to be to iterate through 
+the list using a numeric vector of length 47 so that the names can be referenced 
+to replace the ETYPE in the StormData dataframe. Also, the second output comes back
+as a list after being retreived even though it was initially a vector when I put
+it into the parent list. It's a quick fix with unlist(), but I thought it worth
+mention for anyone looking to learn from this (but honestly I'm pretty sure nobody
+else in the world will ever read this part...).
+
+Regarding columns, I'm looking to keep a few different columns from StormdData. 
+Obviously, the data about casualties and damage numbers is important. Also, the 
+REFNUM column might come in handy as an ID value. I'll keep it around, just in 
+case.
+
+```r
+StormData_skinny <- StormData[,c("EVTYPE", "MAG", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP", "REFNUM")]
+
+StormData_Remastered <- StormData_skinny[FALSE,]
+for (i in 1:length(etype_categories)) {
+  current_etype <- StormData_skinny[unlist(lapply(etype_categories[i], function(x) StormData_skinny$EVTYPE %in% x)),]
+  current_etype$EVTYPE <- names(etype_categories[i])
+  StormData_Remastered <- rbind(StormData_Remastered, current_etype)
+}
+```
+
+This piece of code is created a dataframe that has only the necessary columns and
+has the value of EVTYPE reassigned to be only the 47 different categories collected 
+in the previous section. All that we're missing is a translation of the current
+damage values given in the original dataframe into something that we can actually
+use. Doing `unique(c(StormData_Remastered$PROPDMGEXP, StormData_Remastered$CROPDMGEXP))`
+spits out 5 total: values K, M, B, 0, and an empty string. Based on [a provided resource in the course discussion for this project](https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html), 
+these translate exactly like you might expect. Namely, K, M, and B correspond to
+one thousand, million, and billion.
+
+```r
+StormData_Remastered <- StormData_Remastered %>%
+  mutate(PROPDMGCOMBINED = case_when(
+  PROPDMGEXP == "K" ~ PROPDMG * 1000,
+  PROPDMGEXP == "M" ~ PROPDMG * 1000000,
+  PROPDMGEXP == "B" ~ PROPDMG * 1000000000,
+  TRUE ~ PROPDMG
+  ))
+
+StormData_Remastered <- StormData_Remastered %>%
+  mutate(CROPDMGCOMBINED = case_when(
+  CROPDMGEXP == "K" ~ CROPDMG * 1000,
+  CROPDMGEXP == "M" ~ CROPDMG * 1000000,
+  CROPDMGEXP == "B" ~ CROPDMG * 1000000000,
+  TRUE ~ CROPDMG
+  ))
+```
+
+With that, the data is wrangled and processed, and we're ready to actually do the 
+analysis. We have 11 total columns covering the type of event, the magnitude, and
+the actual damages of the event. Plus the ID. At this point we can finally perform 
+some proper analysis on the data.
+
+# Results
+
+Now that the data has been reshaped to be usable for analysis, we need to lay 
+the foundation for the actual analysis to be done. So, there is a hard limit of 
+3 figures for this analysis (for those confused, this file is a response to a
+prompt provided on the Reproducible Research course on Coursera, and that is 
+part of the rubric), which means those three need to be planned specifically.
+Here's where I want to take them:
+
+1. The first figure should be an overview of the general results for both 
+categories. Since a dual-plot figure is allowed, I intend to show one plot for 
+the casualties and one plot for each category of property damage. This is going
+to be an overview of the entire set of categories. I'll go into detail at the 
+start of the next section.
+2. The second figure will be the output that strictly compares the health effects
+of these events. The idea is to select a specific subset of the previous 47 
+categories to be featured in this figure to show the most harmful event types.
+3. Lastly, the third figure is intended to be the same situation as the second
+but for the total damage done by the events in economic terms. 
+
+## Analysis
