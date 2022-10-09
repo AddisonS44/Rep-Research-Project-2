@@ -754,8 +754,7 @@ Ultimately what this means is that I believe the optimum choice to
 compare between these categories on my initial is to use the mean value
 for the injury and fatalities data while utilizing percentiles for the
 property and crop damage. This is only for the initial cursory overview,
-but I Lincia8492</p>
-<p>think it’ll make for a good benchmark.</p>
+but I think it’ll make for a good benchmark.</p>
 <p>So what I am going to need will be a list containing the event type
 and its corresponding 25th, 50th, and 75th percentile values or its
 corresponding mean, depending on the data point being used at that
@@ -765,31 +764,42 @@ Alternatively, I could not use the list, and instead use some sort of
 data object that’s designed to keep the data about individual
 observations stored in individually organized rows. You know, a
 dataframe.</p>
-<pre class="r"><code>spot_metrics &lt;- data.frame(matrix(nrow = 0, ncol = 9))
-names(spot_metrics) &lt;- c(&quot;EVTYPE&quot;, &quot;MEAN_INJURIES&quot;, &quot;MEAN_FATALITIES&quot;, &quot;P25&quot;, &quot;P50&quot;, &quot;P75&quot;, &quot;C25&quot;, &quot;C50&quot;, &quot;C75&quot;)
+<pre class="r"><code>StormData_Remastered &lt;- StormData_Remastered %&gt;% mutate(TOTALDAMAGE = CROPDMGCOMBINED + PROPDMGCOMBINED)
+
+spot_metrics &lt;- data.frame(matrix(nrow = 0, ncol = 6))
 
 for (name in unique(StormData_Remastered$EVTYPE)) {
   spot_injuries &lt;- mean(StormData_Remastered[StormData_Remastered$EVTYPE == name, &quot;INJURIES&quot;])
   spot_fatalities &lt;- mean(StormData_Remastered[StormData_Remastered$EVTYPE == name, &quot;FATALITIES&quot;])
   
-  p25 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;PROPDMGCOMBINED&quot;], probs = 0.25)
-  p50 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;PROPDMGCOMBINED&quot;], probs = 0.5)
-  p75 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;PROPDMGCOMBINED&quot;], probs = 0.75)
+  T25 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;TOTALDAMAGE&quot;], probs = 0.25)
+  T50 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;TOTALDAMAGE&quot;], probs = 0.5)
+  T75 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;TOTALDAMAGE&quot;], probs = 0.75)
   
-  c25 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;CROPDMGCOMBINED&quot;], probs = 0.25)
-  c50 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;CROPDMGCOMBINED&quot;], probs = 0.5)
-  c75 &lt;- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,&quot;CROPDMGCOMBINED&quot;], probs = 0.75)
+  new_row &lt;- c(name, spot_injuries, spot_fatalities, T25, T50, T75)
   
-  new_row &lt;- c(name, spot_injuries, spot_fatalities, p25, p50, p75, c25, c50, c75)
-  
-  spot_metrics &lt;- rbind(spot_metrics &lt;- new_row)
+  spot_metrics &lt;- rbind(spot_metrics, new_row)
 }
+names(spot_metrics) &lt;- c(&quot;EVTYPE&quot;, &quot;MEAN_INJURIES&quot;, &quot;MEAN_FATALITIES&quot;, &quot;T25&quot;, &quot;T50&quot;, &quot;T75&quot;)</code></pre>
+<p>I have the data collected, now to plot it. The plan is for one plot
+for each of the four data focuses to have a single plot apiece. I intend
+to take the data and sort it into something resembling a bar plot for
+the two mean values, and a stacked bar plot for the percentile data.
+Lastly, I’m going to sort the data by descending, using the 75th
+percentile as the sort for the damage values.</p>
+<p>As an additional note, I took a look here at the crop damage data.
+Frankly, it’s not actually much at all. I’m not really interested in
+differentiating between crop damage and property damage to begin woth,
+so I’m going to combine them into a total damage section. That
+transformation was thrown in just before the creation of the
+spot_metrics dataframe.</p>
+<pre class="r"><code>spot_metrics &lt;- spot_metrics[order(spot_metrics$MEAN_INJURIES, decreasing = TRUE),]
+injuries_plot &lt;- barplot(as.numeric(spot_metrics$MEAN_INJURIES), names.arg = spot_metrics$EVTYPE)</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code>spot_metrics &lt;- spot_metrics[order(spot_metrics$MEAN_FATALITIES, decreasing = TRUE),]
 
-head(spot_metrics, 10)</code></pre>
-<pre><code>##                                                                25% 50% 75% 25%
-## [1,] &quot;winter_weather&quot; &quot;0.069055092542483&quot; &quot;0.0089836562398528&quot; &quot;0&quot; &quot;0&quot; &quot;0&quot; &quot;0&quot;
-##      50% 75%
-## [1,] &quot;0&quot; &quot;0&quot;</code></pre>
+
+spot_metrics &lt;- spot_metrics[order(spot_metrics$T75, decreasing = TRUE),]</code></pre>
 </div>
 </div>
 

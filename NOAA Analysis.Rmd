@@ -442,7 +442,6 @@ for (name in unique(StormData_Remastered$EVTYPE)) {
   spot_metrics <- rbind(spot_metrics, new_row)
 }
 names(spot_metrics) <- c("EVTYPE", "MEAN_INJURIES", "MEAN_FATALITIES", "T25", "T50", "T75")
-head(spot_metrics, 10)
 ```
 
 I have the data collected, now to plot it. The plan is for one plot for each 
@@ -459,10 +458,10 @@ of the spot_metrics dataframe.
 
 ```{r Figure it out}
 spot_metrics <- spot_metrics[order(spot_metrics$MEAN_INJURIES, decreasing = TRUE),]
+injuries_plot <- barplot(as.numeric(spot_metrics$MEAN_INJURIES), names.arg = spot_metrics$EVTYPE)
+
+spot_metrics <- spot_metrics[order(spot_metrics$MEAN_FATALITIES, decreasing = TRUE),]
 
 
 spot_metrics <- spot_metrics[order(spot_metrics$T75, decreasing = TRUE),]
-
-
-spot_metrics <- spot_metrics[order(spot_metrics$MEAN_FATALITIES, decreasing = TRUE),]
 ```

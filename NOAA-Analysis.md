@@ -438,8 +438,7 @@ that lives are at risk. Contrary to that, the damage to crops and property is
 much more continuous. Ultimately what this means is that I believe the optimum 
 choice to compare between these categories on my initial is to use the mean 
 value for the injury and fatalities data while utilizing percentiles for the 
-property and crop damage. This is only for the initial cursory overview, but I Lincia8492
-
+property and crop damage. This is only for the initial cursory overview, but I 
 think it'll make for a good benchmark.
 
 So what I am going to need will be a list containing the event type and its 
@@ -453,33 +452,48 @@ stored in individually organized rows. You know, a dataframe.
 
 
 ```r
-spot_metrics <- data.frame(matrix(nrow = 0, ncol = 9))
-names(spot_metrics) <- c("EVTYPE", "MEAN_INJURIES", "MEAN_FATALITIES", "P25", "P50", "P75", "C25", "C50", "C75")
+StormData_Remastered <- StormData_Remastered %>% mutate(TOTALDAMAGE = CROPDMGCOMBINED + PROPDMGCOMBINED)
+
+spot_metrics <- data.frame(matrix(nrow = 0, ncol = 6))
 
 for (name in unique(StormData_Remastered$EVTYPE)) {
   spot_injuries <- mean(StormData_Remastered[StormData_Remastered$EVTYPE == name, "INJURIES"])
   spot_fatalities <- mean(StormData_Remastered[StormData_Remastered$EVTYPE == name, "FATALITIES"])
   
-  p25 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"PROPDMGCOMBINED"], probs = 0.25)
-  p50 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"PROPDMGCOMBINED"], probs = 0.5)
-  p75 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"PROPDMGCOMBINED"], probs = 0.75)
+  T25 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"TOTALDAMAGE"], probs = 0.25)
+  T50 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"TOTALDAMAGE"], probs = 0.5)
+  T75 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"TOTALDAMAGE"], probs = 0.75)
   
-  c25 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"CROPDMGCOMBINED"], probs = 0.25)
-  c50 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"CROPDMGCOMBINED"], probs = 0.5)
-  c75 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"CROPDMGCOMBINED"], probs = 0.75)
+  new_row <- c(name, spot_injuries, spot_fatalities, T25, T50, T75)
   
-  new_row <- c(name, spot_injuries, spot_fatalities, p25, p50, p75, c25, c50, c75)
-  
-  spot_metrics <- rbind(spot_metrics <- new_row)
+  spot_metrics <- rbind(spot_metrics, new_row)
 }
-
-head(spot_metrics, 10)
+names(spot_metrics) <- c("EVTYPE", "MEAN_INJURIES", "MEAN_FATALITIES", "T25", "T50", "T75")
 ```
 
-```
-##                                                                25% 50% 75% 25%
-## [1,] "winter_weather" "0.069055092542483" "0.0089836562398528" "0" "0" "0" "0"
-##      50% 75%
-## [1,] "0" "0"
+I have the data collected, now to plot it. The plan is for one plot for each 
+of the four data focuses to have a single plot apiece. I intend to take the data 
+and sort it into something resembling a bar plot for the two mean values, and a 
+stacked bar plot for the percentile data. Lastly, I'm going to sort the data by 
+descending, using the 75th percentile as the sort for the damage values.
+
+As an additional note, I took a look here at the crop damage data. Frankly, it's
+not actually much at all. I'm not really interested in differentiating between 
+crop damage and property damage to begin woth, so I'm going to combine them into 
+a total damage section. That transformation was thrown in just before the creation 
+of the spot_metrics dataframe.
+
+
+```r
+spot_metrics <- spot_metrics[order(spot_metrics$MEAN_INJURIES, decreasing = TRUE),]
+injuries_plot <- barplot(as.numeric(spot_metrics$MEAN_INJURIES), names.arg = spot_metrics$EVTYPE)
 ```
 
+![](NOAA-Analysis_files/figure-html/Figure it out-1.png)<!-- -->
+
+```r
+spot_metrics <- spot_metrics[order(spot_metrics$MEAN_FATALITIES, decreasing = TRUE),]
+
+
+spot_metrics <- spot_metrics[order(spot_metrics$T75, decreasing = TRUE),]
+```
