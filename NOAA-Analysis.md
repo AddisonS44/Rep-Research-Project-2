@@ -405,3 +405,81 @@ categories to be featured in this figure to show the most harmful event types.
 but for the total damage done by the events in economic terms. 
 
 ## Analysis
+
+The first piece of analysis needs to be something to compare the different 
+categories to see what categories present as the worst. To do this, I'm going to
+need to select a relevant measure for each piece of data. I generally believe 
+percentiles to be the more broadly useful spot measure of a distribution compared 
+to means, however in this instance I think I will be taking a split approach. To 
+understand why I find this necessary, consider the weather events you may have 
+experienced recently that stood out. 
+
+I am a resident of Texas, so I'll be using some location-specific references, but 
+there will be examples for each area. When you think extreme weather in Texas, 
+you think tornadoes. Tornadoes mean property damage and injuries, but not always
+both. The news always, highlights these tornadoes and the wreckage they can leave
+behind, but not all of them are catastrophic. Personally, an EF0 tornado once passed
+through my neighborhood, and I didn't know until later that week when roofers came
+knocking door to door doing repairs (only time a solicitor has ever been useful?).
+Nobody was hurt, but when I went to take a look just 1000 feet away, it was plain
+as day that something had happened. But nobody was hurt. Compare that to the 
+intensity of several other levels of tornado under the standard EF0-EF5 
+classification and you'll notice that actually, it's not until you hit EF3 that 
+these tornadoes really start becoming deadly. Lower levels of tornado can and do
+still cause significant injury or fatalities, but the health risk doesn't become 
+serious until you reach a certain level of intensity. But the property damage is 
+always there, and the crop damage is always there.
+
+So what's my point? Well, my point is that property damage always happens, but
+until you reach the point where a certain intensity on a lot of these events is 
+reached (temperatures over 105 degrees, winds that can tear apart a home, ice
+making roads significantly dangerous or damaging infrastructure, to name a few)
+that lives are at risk. Contrary to that, the damage to crops and property is
+much more continuous. Ultimately what this means is that I believe the optimum 
+choice to compare between these categories on my initial is to use the mean 
+value for the injury and fatalities data while utilizing percentiles for the 
+property and crop damage. This is only for the initial cursory overview, but I Lincia8492
+
+think it'll make for a good benchmark.
+
+So what I am going to need will be a list containing the event type and its 
+corresponding 25th, 50th, and 75th percentile values or its corresponding mean, 
+depending on the data point being used at that moment. This needs to be done for
+fatalities (mean), injuries (mean), property damage (percentile), and crop damage 
+(percentile). Alternatively, I could not use the list, and instead use some sort
+of data object that's designed to keep the data about individual observations 
+stored in individually organized rows. You know, a dataframe.
+
+
+
+```r
+spot_metrics <- data.frame(matrix(nrow = 0, ncol = 9))
+names(spot_metrics) <- c("EVTYPE", "MEAN_INJURIES", "MEAN_FATALITIES", "P25", "P50", "P75", "C25", "C50", "C75")
+
+for (name in unique(StormData_Remastered$EVTYPE)) {
+  spot_injuries <- mean(StormData_Remastered[StormData_Remastered$EVTYPE == name, "INJURIES"])
+  spot_fatalities <- mean(StormData_Remastered[StormData_Remastered$EVTYPE == name, "FATALITIES"])
+  
+  p25 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"PROPDMGCOMBINED"], probs = 0.25)
+  p50 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"PROPDMGCOMBINED"], probs = 0.5)
+  p75 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"PROPDMGCOMBINED"], probs = 0.75)
+  
+  c25 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"CROPDMGCOMBINED"], probs = 0.25)
+  c50 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"CROPDMGCOMBINED"], probs = 0.5)
+  c75 <- quantile(StormData_Remastered[StormData_Remastered$EVTYPE == name,"CROPDMGCOMBINED"], probs = 0.75)
+  
+  new_row <- c(name, spot_injuries, spot_fatalities, p25, p50, p75, c25, c50, c75)
+  
+  spot_metrics <- rbind(spot_metrics <- new_row)
+}
+
+head(spot_metrics, 10)
+```
+
+```
+##                                                                25% 50% 75% 25%
+## [1,] "winter_weather" "0.069055092542483" "0.0089836562398528" "0" "0" "0" "0"
+##      50% 75%
+## [1,] "0" "0"
+```
+
